@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI PM Coach - 产品经理能力测评平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col">
+        <!-- 导航栏 -->
+        <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-lg">AI</span>
+                    </div>
+                    <h1 class="text-xl font-bold text-gray-900">AI PM Coach</h1>
+                </div>
+                <div class="flex gap-4">
+                    <a href="AI-PM-Coach-在线测评.html" class="px-4 py-2 text-gray-700 hover:text-gray-900">开始测评</a>
+                    <a href="admin.html" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">后台管理</a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero 区域 -->
+        <section class="hero-gradient text-white py-20">
+            <div class="max-w-7xl mx-auto px-4 text-center">
+                <h1 class="text-4xl md:text-5xl font-bold mb-6 fade-in">
+                    AI PM Coach
+                </h1>
+                <p class="text-xl md:text-2xl mb-4 opacity-90">
+                    智能产品经理能力测评平台
+                </p>
+                <p class="text-base md:text-lg mb-8 opacity-80 max-w-2xl mx-auto leading-relaxed">
+                    基于 CAT 自适应测试，精准评估你的 AI 产品经理核心能力。
+                    覆盖 RAG、Agent、模型选型、数据驱动等 10+ 关键维度，
+                    帮你快速定位优势和盲区。
+                </p>
+                <div class="flex gap-4 justify-center flex-wrap">
+                    <a href="AI-PM-Coach-在线测评.html" class="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg">
+                        🚀 开始测评
+                    </a>
+                    <a href="#features" class="px-8 py-4 bg-white/20 text-white rounded-xl font-bold text-lg hover:bg-white/30 transition">
+                        了解更多
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- 核心功能 -->
+        <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-16" id="features">
+            <section class="mb-16">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4 text-center">核心功能</h2>
+                <p class="text-gray-600 mb-12 text-center">完整的 AI PM Coach 平台包含以下能力：</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- 功能卡片 1 -->
+                    <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
+                        <div class="text-3xl mb-3">🎯</div>
+                        <h3 class="font-semibold text-gray-900 mb-2">CAT 自适应引擎</h3>
+                        <p class="text-sm text-gray-600">智能选题，根据答题情况自动调整难度，18 道题精准画像</p>
+                    </div>
+
+                    <!-- 功能卡片 2 -->
+                    <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
+                        <div class="text-3xl mb-3">🔍</div>
+                        <h3 class="font-semibold text-gray-900 mb-2">名词解释</h3>
+                        <p class="text-sm text-gray-600">选中任何专业词语，点击查询获得 AI 详细解释</p>
+                    </div>
+
+                    <!-- 功能卡片 3 -->
+                    <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
+                        <div class="text-3xl mb-3">📊</div>
+                        <h3 class="font-semibold text-gray-900 mb-2">维度雷达图</h3>
+                        <p class="text-sm text-gray-600">测评完成后展示各维度能力雷达图，直观呈现优劣势</p>
+                    </div>
+
+                    <!-- 功能卡片 4 -->
+                    <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
+                        <div class="text-3xl mb-3">📚</div>
+                        <h3 class="font-semibold text-gray-900 mb-2">收藏词库</h3>
+                        <p class="text-sm text-gray-600">收藏不熟悉的专业术语，随时回顾加深记忆</p>
+                    </div>
+                </div>
+
+                <!-- 测评流程说明 -->
+                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-8 border border-indigo-100">
+                    <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">测评流程</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span class="text-3xl">1</span>
+                            </div>
+                            <h4 class="font-bold text-lg mb-2">开始测评</h4>
+                            <p class="text-gray-600">进入在线测评系统</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span class="text-3xl">2</span>
+                            </div>
+                            <h4 class="font-bold text-lg mb-2">智能答题</h4>
+                            <p class="text-gray-600">CAT 自适应系统出题</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <span class="text-3xl">3</span>
+                            </div>
+                            <h4 class="font-bold text-lg mb-2">获取报告</h4>
+                            <p class="text-gray-600">查看雷达图和能力分析</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 技术特点 -->
+            <section class="mb-16">
+                <h2 class="text-3xl font-bold text-gray-900 mb-4 text-center">技术特点</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white rounded-xl p-6 border border-gray-200">
+                        <h3 class="font-bold text-xl mb-3">🚀 高性能</h3>
+                        <p class="text-gray-600">基于 Node.js + Express 构建，响应迅速</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 border border-gray-200">
+                        <h3 class="font-bold text-xl mb-3">🔒 安全可靠</h3>
+                        <p class="text-gray-600">JWT 认证 + bcrypt 密码加密</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 border border-gray-200">
+                        <h3 class="font-bold text-xl mb-3">📱 响应式设计</h3>
+                        <p class="text-gray-600">支持桌面和移动设备</p>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 border border-gray-200">
+                        <h3 class="font-bold text-xl mb-3">🎨 现代 UI</h3>
+                        <p class="text-gray-600">Tailwind CSS 驱动，美观大方</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="bg-gray-800 text-white py-8">
+            <div class="max-w-7xl mx-auto px-4 text-center">
+                <p>&copy; 2026 AI PM Coach. All rights reserved.</p>
+                <p class="text-gray-400 text-sm mt-2">智能产品经理能力测评平台</p>
+            </div>
+        </footer>
+    </div>
+</body>
+  </html>
