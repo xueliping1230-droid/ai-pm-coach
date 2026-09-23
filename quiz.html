@@ -663,7 +663,7 @@
             <button onclick="location.reload()" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition">
                 🔄 重新测评
             </button>
-            <button onclick="location.href='index.html'" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition">
+            <button onclick="location.href='/'" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition">
                 🏠 返回首页
             </button>
         </div>
@@ -1065,6 +1065,9 @@ function showAnswerResult(q, selected, submitMode) {
         cardEl.style.pointerEvents = 'none';
         cardEl.classList.remove('cursor-pointer');
         cardEl.classList.remove('selected');
+        // 重置原生 radio 的 checked 属性（关键！浏览器原生选中不会自动取消）
+        const radio = cardEl.querySelector('input[type="radio"]');
+        if (radio) radio.checked = false;
 
         if (val === q.answer) {
             cardEl.classList.add('correct');
@@ -1138,12 +1141,14 @@ document.getElementById('skipBtn').addEventListener('click', () => {
     // 已答题不能再跳过
     if (isCurrentAnswered()) {
         showToast('本题已提交，无法跳过');
+        updateNextBtn(); // 同步按钮状态，让用户看到"下一题/全部完成"
         return;
     }
     // 跳过：标记为已答（不计分），直接下一题
     quizState.answered.push(currentQuestion.num);
     quizState.skippedNums.push(currentQuestion.num);
     quizState.correctMap[currentQuestion.num] = null;
+    currentSelection = null; // 清掉选中状态，防止残留
     const next = selectNextQuestion();
     if (next) {
         renderQuestion(next);

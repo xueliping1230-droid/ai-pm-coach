@@ -33,8 +33,7 @@
                     <h1 class="text-xl font-bold text-gray-900">AI PM Coach</h1>
                 </div>
                 <div class="flex gap-4">
-                    <a href="AI-PM-Coach-在线测评.html" class="px-4 py-2 text-gray-700 hover:text-gray-900">开始测评</a>
-                    <a href="admin.html" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">后台管理</a>
+                    <a href="/admin" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">后台管理</a>
                 </div>
             </div>
         </nav>
@@ -54,7 +53,7 @@
                     帮你快速定位优势和盲区。
                 </p>
                 <div class="flex gap-4 justify-center flex-wrap">
-                    <a href="AI-PM-Coach-在线测评.html" class="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg">
+                    <a href="/quiz" class="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg">
                         🚀 开始测评
                     </a>
                     <a href="#features" class="px-8 py-4 bg-white/20 text-white rounded-xl font-bold text-lg hover:bg-white/30 transition">
@@ -99,67 +98,69 @@
                         <p class="text-sm text-gray-600">收藏不熟悉的专业术语，随时回顾加深记忆</p>
                     </div>
                 </div>
+            </section>
 
-                <!-- 测评流程说明 -->
-                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-8 border border-indigo-100">
-                    <h3 class="text-2xl font-bold text-gray-900 mb-6 text-center">测评流程</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div class="text-center">
-                            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span class="text-3xl">1</span>
-                            </div>
-                            <h4 class="font-bold text-lg mb-2">开始测评</h4>
-                            <p class="text-gray-600">进入在线测评系统</p>
-                        </div>
-                        <div class="text-center">
-                            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span class="text-3xl">2</span>
-                            </div>
-                            <h4 class="font-bold text-lg mb-2">智能答题</h4>
-                            <p class="text-gray-600">CAT 自适应系统出题</p>
-                        </div>
-                        <div class="text-center">
-                            <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <span class="text-3xl">3</span>
-                            </div>
-                            <h4 class="font-bold text-lg mb-2">获取报告</h4>
-                            <p class="text-gray-600">查看雷达图和能力分析</p>
-                        </div>
-                    </div>
+            <!-- 测评维度 -->
+            <section class="bg-white rounded-xl p-8 border border-gray-200 mb-16">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">📋 测评覆盖 10 大能力维度</h2>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">产品设计</div>
+                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">技术方案评估</div>
+                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">问题诊断</div>
+                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">数据处理</div>
+                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">性能优化</div>
+                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">参数调优</div>
+                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">架构设计</div>
+                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">评测体系</div>
+                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">Agent 架构</div>
+                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">业务洞察</div>
                 </div>
             </section>
 
-            <!-- 技术特点 -->
-            <section class="mb-16">
-                <h2 class="text-3xl font-bold text-gray-900 mb-4 text-center">技术特点</h2>
+            <!-- 技术架构 -->
+            <section class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-8 border border-blue-200">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">🏗️ 技术架构</h2>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div class="bg-white rounded-xl p-6 border border-gray-200">
-                        <h3 class="font-bold text-xl mb-3">🚀 高性能</h3>
-                        <p class="text-gray-600">基于 Node.js + Express 构建，响应迅速</p>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-3">前端技术栈</h3>
+                        <ul class="space-y-2 text-gray-700">
+                            <li>• 原生 HTML + JavaScript（无框架依赖）</li>
+                            <li>• Tailwind CSS 响应式设计</li>
+                            <li>• Chart.js 数据可视化</li>
+                            <li>• localStorage 本地数据持久化</li>
+                        </ul>
                     </div>
-                    <div class="bg-white rounded-xl p-6 border border-gray-200">
-                        <h3 class="font-bold text-xl mb-3">🔒 安全可靠</h3>
-                        <p class="text-gray-600">JWT 认证 + bcrypt 密码加密</p>
-                    </div>
-                    <div class="bg-white rounded-xl p-6 border border-gray-200">
-                        <h3 class="font-bold text-xl mb-3">📱 响应式设计</h3>
-                        <p class="text-gray-600">支持桌面和移动设备</p>
-                    </div>
-                    <div class="bg-white rounded-xl p-6 border border-gray-200">
-                        <h3 class="font-bold text-xl mb-3">🎨 现代 UI</h3>
-                        <p class="text-gray-600">Tailwind CSS 驱动，美观大方</p>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-3">后端 & AI 集成</h3>
+                        <ul class="space-y-2 text-gray-700">
+                            <li>• Node.js + Express 服务端</li>
+                            <li>• DeepSeek AI 名词解释</li>
+                            <li>• JWT 认证 + bcrypt 密码哈希</li>
+                            <li>• JSON 文件数据库（零运维）</li>
+                        </ul>
                     </div>
                 </div>
             </section>
         </main>
 
-        <!-- 页脚 -->
-        <footer class="bg-gray-800 text-white py-8">
+        <!-- 底部 CTA -->
+        <section class="bg-indigo-600 text-white py-12">
+            <div class="max-w-4xl mx-auto px-4 text-center">
+                <h2 class="text-2xl md:text-3xl font-bold mb-4">准备好测试你的 AI PM 能力了吗？</h2>
+                <p class="opacity-90 mb-6">18 道精选题目，5 分钟完成，立即获得能力诊断</p>
+                <a href="/quiz" class="inline-block px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg">
+                    🚀 立即开始测评
+                </a>
+            </div>
+        </section>
+
+        <!-- 底部 -->
+        <footer class="bg-gray-900 text-gray-400 py-8">
             <div class="max-w-7xl mx-auto px-4 text-center">
-                <p>&copy; 2026 AI PM Coach. All rights reserved.</p>
-                <p class="text-gray-400 text-sm mt-2">智能产品经理能力测评平台</p>
+                <p>© 2026 AI PM Coach - 智能产品经理能力测评平台</p>
+                <p class="text-sm mt-2">帮助产品经理快速成长，助力 AI 产品落地</p>
             </div>
         </footer>
     </div>
 </body>
-  </html>
+</html>

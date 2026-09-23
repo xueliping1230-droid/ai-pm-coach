@@ -560,8 +560,12 @@ function getTokenTrend(days) {
 // ============================================================
 // 静态文件服务（前端页面与 API 同源部署）
 // ============================================================
+// 干净 URL 路由：/quiz → quiz.html, /admin → admin.html
+app.get('/quiz', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'quiz.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'admin.html')));
+
 // 敏感文件/目录禁止通过 HTTP 访问（db.json 里有密钥和密码哈希）
-const PUBLIC_HTML = new Set(['/', '/index.html', '/AI-PM-Coach-在线测评.html', '/admin.html']);
+const PUBLIC_HTML = new Set(['/', '/index.html', '/quiz.html', '/admin.html', '/quiz', '/admin']);
 app.use((req, res, next) => {
     const p = decodeURIComponent(req.path).replace(/\\/g, '/');
     if (p.startsWith('/data/') || p.startsWith('/node_modules/') ||
