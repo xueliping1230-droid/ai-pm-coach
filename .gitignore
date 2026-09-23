@@ -1,0 +1,24 @@
+# 本地开发产物
+node_modules/
+npm-debug.log*
+*.log
+
+# 运行时数据——绝对不能上传到 GitHub！里面有密钥和密码哈希
+data/
+!data/.gitkeep
+
+# 历史文件和草稿（Zeabur 部署不需要）
+代码/
+文档/
+自测清单/
+.trae/
+
+# 打包产物
+*部署包*.zip
+*部署包*/
+
+# 系统
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
