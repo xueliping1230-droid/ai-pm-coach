@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: ai-pm-coach
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: JWT_SECRET
+        value: aipm_7f3c91e8b2a44d60f58e1c93b7d20a64f
+      - key: ADMIN_PASSWORD
+        value: Admin@2026
+      - key: DATA_DIR
+        value: /data
+      - key: NODE_VERSION
+        value: "20"
