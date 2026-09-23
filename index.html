@@ -3,164 +3,1664 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI PM Coach - 产品经理能力测评平台</title>
+    <title>AI PM Coach - 在线测评</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
-        .fade-in {
-            animation: fadeIn 0.5s ease-in;
+
+        /* 确保题目和答案区域可以选中文本 */
+        .selectable {
+            user-select: text;
+            -webkit-user-select: text;
+            cursor: text;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+
+        /* 查询图标按钮 */
+        .query-icon {
+            position: fixed;
+            z-index: 50;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5);
+            transition: all 0.15s ease-out;
+            opacity: 0;
+            transform: translateY(5px) scale(0.8);
         }
-        .hero-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        .query-icon.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .query-icon:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        }
+
+        .query-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* 解释弹框遮罩 */
+        .explanation-mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 90;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .explanation-mask.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 解释弹框 */
+        .explanation-popup {
+            position: fixed;
+            z-index: 100;
+            width: 420px;
+            max-width: calc(100vw - 32px);
+            max-height: 75vh;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            animation: popIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes popIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .explanation-header {
+            padding: 20px 24px 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .explanation-term {
+            font-size: 20px;
+            font-weight: 700;
+            color: #6366f1;
+        }
+
+        .explanation-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: #f3f4f6;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #6b7280;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .explanation-close:hover {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .explanation-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .explanation-content {
+            font-size: 14px;
+            line-height: 1.85;
+            color: #374151;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        /* 加载状态 */
+        .loading-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            color: #6b7280;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e5e7eb;
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 错误状态 */
+        .error-state {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .error-state .error-emoji {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .error-state .error-msg {
+            color: #dc2626;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .error-state .error-detail {
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        /* 底部操作 */
+        .explanation-footer {
+            padding: 12px 24px 20px;
+            border-top: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .explanation-source {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .requery-btn {
+            padding: 8px 16px;
+            background: #eef2ff;
+            color: #6366f1;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .requery-btn:hover {
+            background: #e0e7ff;
+        }
+
+        /* 难度标签 */
+        .difficulty-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .difficulty-3 {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        /* 选项卡片 hover 效果 */
+        .option-card {
+            transition: all 0.15s ease;
+        }
+
+        .option-card:hover {
+            border-color: #6366f1;
+            background: #f5f3ff;
+        }
+
+        .option-card.selected {
+            border-color: #6366f1;
+            background: #eef2ff;
+        }
+
+        .option-card.correct {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+
+        .option-card.wrong {
+            border-color: #ef4444;
+            background: #fef2f2;
+        }
+
+        /* 选中文字高亮提示 */
+        ::selection {
+            background: #c7d2fe;
+            color: #312e81;
+        }
+
+        /* 收藏星标按钮 */
+        .star-btn {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: #f3f4f6;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            font-size: 16px;
+        }
+
+        .star-btn:hover {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .star-btn.active {
+            background: #fef3c7;
+            color: #f59e0b;
+        }
+
+        .star-btn.active:hover {
+            color: #d97706;
+        }
+
+        /* 收藏词库侧边面板触发条 */
+        .glossary-trigger {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 40;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 16px 6px;
+            border-radius: 0 10px 10px 0;
+            cursor: pointer;
+            box-shadow: 4px 0 12px rgba(99, 102, 241, 0.3);
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 2px;
+            transition: all 0.2s;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .glossary-trigger:hover {
+            padding-right: 10px;
+            box-shadow: 6px 0 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .glossary-trigger .glossary-count {
+            background: white;
+            color: #6366f1;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            writing-mode: horizontal-tb;
+        }
+
+        /* 收藏词库面板 */
+        .glossary-panel {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 300px;
+            background: white;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+            z-index: 80;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease-out;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .glossary-panel.open {
+            transform: translateX(0);
+        }
+
+        .glossary-panel-header {
+            padding: 20px 20px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .glossary-panel-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .glossary-panel-close {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: #f3f4f6;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #6b7280;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .glossary-panel-close:hover {
+            background: #e5e7eb;
+        }
+
+        .glossary-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .glossary-item {
+            padding: 12px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.12s;
+            border: 1px solid transparent;
+        }
+
+        .glossary-item:hover {
+            background: #f5f3ff;
+            border-color: #e0e7ff;
+        }
+
+        .glossary-item-term {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .glossary-item-time {
+            font-size: 11px;
+            color: #9ca3af;
+        }
+
+        .glossary-empty {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+        }
+
+        .glossary-empty-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+        }
+
+        .glossary-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            z-index: 70;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .glossary-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        /* 答题提示 toast */
+        .answer-toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: #dc2626;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+            z-index: 60;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .answer-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div class="min-h-screen flex flex-col">
-        <!-- 导航栏 -->
-        <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                        <span class="text-white font-bold text-lg">AI</span>
-                    </div>
-                    <h1 class="text-xl font-bold text-gray-900">AI PM Coach</h1>
-                </div>
-                <div class="flex gap-4">
-                    <a href="/admin" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">后台管理</a>
-                </div>
-            </div>
-        </nav>
+<body class="bg-gray-50 min-h-screen">
 
-        <!-- Hero 区域 -->
-        <section class="hero-gradient text-white py-20">
-            <div class="max-w-7xl mx-auto px-4 text-center">
-                <h1 class="text-4xl md:text-5xl font-bold mb-6 fade-in">
-                    AI PM Coach
-                </h1>
-                <p class="text-xl md:text-2xl mb-4 opacity-90">
-                    智能产品经理能力测评平台
-                </p>
-                <p class="text-base md:text-lg mb-8 opacity-80 max-w-2xl mx-auto leading-relaxed">
-                    基于 CAT 自适应测试，精准评估你的 AI 产品经理核心能力。
-                    覆盖 RAG、Agent、模型选型、数据驱动等 10+ 关键维度，
-                    帮你快速定位优势和盲区。
-                </p>
-                <div class="flex gap-4 justify-center flex-wrap">
-                    <a href="/quiz" class="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg">
-                        🚀 开始测评
-                    </a>
-                    <a href="#features" class="px-8 py-4 bg-white/20 text-white rounded-xl font-bold text-lg hover:bg-white/30 transition">
-                        了解更多
-                    </a>
+<!-- ============ 首页视图 ============ -->
+<div id="homeView">
+    <!-- 导航栏 -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-lg">AI</span>
+                </div>
+                <h1 class="text-xl font-bold text-gray-900">AI PM Coach</h1>
+            </div>
+            <div class="flex gap-4">
+                <a href="/admin" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">后台管理</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white py-20">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold mb-6">AI PM Coach</h1>
+            <p class="text-xl md:text-2xl mb-4 opacity-90">智能产品经理能力测评平台</p>
+            <p class="text-base md:text-lg mb-8 opacity-80 max-w-2xl mx-auto leading-relaxed">
+                基于 CAT 自适应测试，精准评估你的 AI 产品经理核心能力。
+                覆盖 RAG、Agent、模型选型、数据驱动等 10+ 关键维度，
+                帮你快速定位优势和盲区。
+            </p>
+            <div class="flex gap-4 justify-center flex-wrap">
+                <button onclick="startQuiz()" class="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg">
+                    🚀 开始测评
+                </button>
+                <a href="#features" class="px-8 py-4 bg-white/20 text-white rounded-xl font-bold text-lg hover:bg-white/30 transition">
+                    了解更多
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 核心功能 -->
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-16" id="features">
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-gray-900 mb-4 text-center">核心功能</h2>
+            <p class="text-gray-600 mb-12 text-center">完整的 AI PM Coach 平台包含以下能力：</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
+                    <div class="text-3xl mb-3">🎯</div>
+                    <h3 class="font-semibold text-gray-900 mb-2">CAT 自适应引擎</h3>
+                    <p class="text-sm text-gray-600">智能选题，根据答题情况自动调整难度，18 道题精准画像</p>
+                </div>
+                <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
+                    <div class="text-3xl mb-3">🔍</div>
+                    <h3 class="font-semibold text-gray-900 mb-2">名词解释</h3>
+                    <p class="text-sm text-gray-600">选中任何专业词语，点击查询获得 AI 详细解释</p>
+                </div>
+                <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
+                    <div class="text-3xl mb-3">📊</div>
+                    <h3 class="font-semibold text-gray-900 mb-2">维度雷达图</h3>
+                    <p class="text-sm text-gray-600">测评完成后展示各维度能力雷达图，直观呈现优劣势</p>
+                </div>
+                <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
+                    <div class="text-3xl mb-3">📚</div>
+                    <h3 class="font-semibold text-gray-900 mb-2">收藏词库</h3>
+                    <p class="text-sm text-gray-600">收藏不熟悉的专业术语，随时回顾加深记忆</p>
                 </div>
             </div>
         </section>
 
-        <!-- 核心功能 -->
-        <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-16" id="features">
-            <section class="mb-16">
-                <h2 class="text-3xl font-bold text-gray-900 mb-4 text-center">核心功能</h2>
-                <p class="text-gray-600 mb-12 text-center">完整的 AI PM Coach 平台包含以下能力：</p>
+        <!-- 测评维度 -->
+        <section class="bg-white rounded-xl p-8 border border-gray-200 mb-16">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">📋 测评覆盖 10 大能力维度</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">产品设计</div>
+                <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">技术方案评估</div>
+                <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">问题诊断</div>
+                <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">数据处理</div>
+                <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">性能优化</div>
+                <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">参数调优</div>
+                <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">架构设计</div>
+                <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">评测体系</div>
+                <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">Agent 架构</div>
+                <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">业务洞察</div>
+            </div>
+        </section>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <!-- 功能卡片 1 -->
-                    <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
-                        <div class="text-3xl mb-3">🎯</div>
-                        <h3 class="font-semibold text-gray-900 mb-2">CAT 自适应引擎</h3>
-                        <p class="text-sm text-gray-600">智能选题，根据答题情况自动调整难度，18 道题精准画像</p>
-                    </div>
-
-                    <!-- 功能卡片 2 -->
-                    <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
-                        <div class="text-3xl mb-3">🔍</div>
-                        <h3 class="font-semibold text-gray-900 mb-2">名词解释</h3>
-                        <p class="text-sm text-gray-600">选中任何专业词语，点击查询获得 AI 详细解释</p>
-                    </div>
-
-                    <!-- 功能卡片 3 -->
-                    <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
-                        <div class="text-3xl mb-3">📊</div>
-                        <h3 class="font-semibold text-gray-900 mb-2">维度雷达图</h3>
-                        <p class="text-sm text-gray-600">测评完成后展示各维度能力雷达图，直观呈现优劣势</p>
-                    </div>
-
-                    <!-- 功能卡片 4 -->
-                    <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg hover:border-indigo-300 transition">
-                        <div class="text-3xl mb-3">📚</div>
-                        <h3 class="font-semibold text-gray-900 mb-2">收藏词库</h3>
-                        <p class="text-sm text-gray-600">收藏不熟悉的专业术语，随时回顾加深记忆</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 测评维度 -->
-            <section class="bg-white rounded-xl p-8 border border-gray-200 mb-16">
-                <h2 class="text-2xl font-bold text-gray-900 mb-6">📋 测评覆盖 10 大能力维度</h2>
-                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">产品设计</div>
-                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">技术方案评估</div>
-                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">问题诊断</div>
-                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">数据处理</div>
-                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">性能优化</div>
-                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">参数调优</div>
-                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">架构设计</div>
-                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">评测体系</div>
-                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">Agent 架构</div>
-                    <div class="bg-indigo-50 text-indigo-700 px-4 py-3 rounded-lg text-center text-sm font-medium">业务洞察</div>
-                </div>
-            </section>
-
-            <!-- 技术架构 -->
-            <section class="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-8 border border-blue-200">
-                <h2 class="text-2xl font-bold text-gray-900 mb-4">🏗️ 技术架构</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <h3 class="font-semibold text-gray-900 mb-3">前端技术栈</h3>
-                        <ul class="space-y-2 text-gray-700">
-                            <li>• 原生 HTML + JavaScript（无框架依赖）</li>
-                            <li>• Tailwind CSS 响应式设计</li>
-                            <li>• Chart.js 数据可视化</li>
-                            <li>• localStorage 本地数据持久化</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h3 class="font-semibold text-gray-900 mb-3">后端 & AI 集成</h3>
-                        <ul class="space-y-2 text-gray-700">
-                            <li>• Node.js + Express 服务端</li>
-                            <li>• DeepSeek AI 名词解释</li>
-                            <li>• JWT 认证 + bcrypt 密码哈希</li>
-                            <li>• JSON 文件数据库（零运维）</li>
-                        </ul>
-                    </div>
-                </div>
-            </section>
-        </main>
-
-        <!-- 底部 CTA -->
-        <section class="bg-indigo-600 text-white py-12">
+        <!-- CTA -->
+        <section class="bg-indigo-600 text-white py-12 rounded-xl">
             <div class="max-w-4xl mx-auto px-4 text-center">
                 <h2 class="text-2xl md:text-3xl font-bold mb-4">准备好测试你的 AI PM 能力了吗？</h2>
                 <p class="opacity-90 mb-6">18 道精选题目，5 分钟完成，立即获得能力诊断</p>
-                <a href="/quiz" class="inline-block px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg">
+                <button onclick="startQuiz()" class="inline-block px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-lg">
                     🚀 立即开始测评
-                </a>
+                </button>
             </div>
         </section>
+    </main>
 
-        <!-- 底部 -->
-        <footer class="bg-gray-900 text-gray-400 py-8">
-            <div class="max-w-7xl mx-auto px-4 text-center">
-                <p>© 2026 AI PM Coach - 智能产品经理能力测评平台</p>
-                <p class="text-sm mt-2">帮助产品经理快速成长，助力 AI 产品落地</p>
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-8">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p>© 2026 AI PM Coach - 智能产品经理能力测评平台</p>
+            <p class="text-sm mt-2">帮助产品经理快速成长，助力 AI 产品落地</p>
+        </div>
+    </footer>
+</div>
+
+<!-- ============ 测评视图（默认隐藏） ============ -->
+<div id="quizView" class="hidden">
+
+<div class="min-h-screen flex flex-col max-w-3xl mx-auto">
+
+    <!-- 顶部导航 -->
+    <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <span class="text-white font-bold text-sm">AI</span>
             </div>
-        </footer>
+            <div>
+                <div class="font-bold text-gray-900 text-sm">AI PM Coach</div>
+                <div class="text-xs text-gray-500">CAT 自适应测评</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="text-right">
+                <div class="text-xs text-gray-500">当前得分</div>
+                <div class="font-bold text-indigo-600" id="scoreDisplay">50</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 px-4 py-6">
+
+        <!-- CAT 状态信息卡片 -->
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-5 mb-6">
+            <div class="grid grid-cols-3 gap-4 mb-3">
+                <div>
+                    <div class="text-xs text-gray-500 mb-1">维度</div>
+                    <div class="font-semibold text-gray-900 text-sm" id="dimensionDisplay">—</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500 mb-1">难度</div>
+                    <div class="flex items-center gap-2">
+                        <span class="difficulty-badge" id="difficultyBadge">—</span>
+                        <span class="text-xs text-gray-400">已答 <span id="answeredCount">0</span> 题</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500 mb-1">当前分数</div>
+                    <div class="font-semibold text-indigo-600" id="scoreDisplayCard">50</div>
+                </div>
+            </div>
+            <div class="text-xs text-blue-700 bg-white/50 rounded-lg px-3 py-2" id="selectionReason">
+                <strong>选题理由：</strong>开始测评，先从核心题目中随机抽取
+            </div>
+        </div>
+
+        <!-- 题目卡片（由 JS 动态渲染） -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" id="questionCard">
+            <!-- 加载占位 -->
+            <div class="p-12 text-center text-gray-400">加载中...</div>
+        </div>
+
+        <!-- 解析展示（答题后显示） -->
+        <div id="answerExplanation" class="mt-4 hidden">
+            <div class="rounded-xl p-5 border-2" id="explanationBox">
+                <div class="flex items-start gap-2 mb-3">
+                    <span class="text-xl" id="explanationIcon">✅</span>
+                    <div>
+                        <div class="font-bold text-lg" id="explanationTitle">—</div>
+                    </div>
+                </div>
+                <div class="text-gray-700 leading-relaxed text-sm" id="explanationText"></div>
+            </div>
+        </div>
+
+        <!-- 提示信息 -->
+        <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex items-start gap-2">
+            <span class="text-base leading-none">💡</span>
+            <span>
+                选中题目或选项中的任何专业词语（如 <strong>RAG</strong>、<strong>chunks</strong>、<strong>父子文档检索</strong>），会出现 <strong>🔍 查询</strong> 图标，点击即可获得 AI 详细解释。
+            </span>
+        </div>
+
+    </main>
+
+    <!-- 底部操作栏 -->
+    <footer class="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between sticky bottom-0">
+        <button id="skipBtn" class="text-gray-500 hover:text-gray-700 text-sm font-medium px-4 py-2">
+            跳过本题
+        </button>
+        <button id="nextBtn" class="px-6 py-2.5 bg-gray-200 text-gray-400 rounded-lg font-medium text-sm cursor-not-allowed transition" disabled>
+            提交答案
+        </button>
+    </footer>
+
+    <!-- 答题提示 toast -->
+    <div id="answerToast" class="answer-toast"></div>
+
+</div>
+
+<!-- 查询图标按钮 -->
+<button id="queryIcon" class="query-icon" title="点击查询解释">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+    </svg>
+</button>
+
+<!-- 解释弹框遮罩 -->
+<div id="explanationMask" class="explanation-mask"></div>
+
+<!-- 解释弹框 -->
+<div id="explanationPopup" class="explanation-popup" style="display: none;">
+    <div class="explanation-header">
+        <div class="explanation-term" id="explanationTerm">RAG</div>
+        <div class="flex items-center gap-2">
+            <button class="star-btn" id="starBtn" title="收藏到词库" aria-label="收藏">★</button>
+            <button class="explanation-close" id="explanationCloseBtn" aria-label="关闭">✕</button>
+        </div>
     </div>
+    <div class="explanation-body" id="explanationBody">
+        <!-- 内容由 JS 填充 -->
+    </div>
+    <div class="explanation-footer" id="explanationFooter" style="display: none;">
+        <span class="explanation-source">由 DeepSeek AI 生成</span>
+        <button class="requery-btn" id="requeryBtn">🔄 重新查询</button>
+    </div>
+</div>
+
+<!-- 收藏词库触发条 -->
+<div class="glossary-trigger" id="glossaryTrigger">
+    <span>📚 收藏词库</span>
+    <span class="glossary-count" id="glossaryCount" style="display:none;">0</span>
+</div>
+
+<!-- 收藏词库面板遮罩 -->
+<div class="glossary-overlay" id="glossaryOverlay"></div>
+
+<!-- 收藏词库面板 -->
+<div class="glossary-panel" id="glossaryPanel">
+    <div class="glossary-panel-header">
+        <div class="glossary-panel-title">📚 我收藏的词库</div>
+        <button class="glossary-panel-close" id="glossaryCloseBtn">✕</button>
+    </div>
+    <div class="glossary-list" id="glossaryList">
+        <!-- 词库列表由 JS 填充 -->
+    </div>
+</div>
+
+<!-- 结果总结页面（初始隐藏，答完全部题目后显示） -->
+<div id="finalResult" class="hidden fixed inset-0 bg-gray-100 overflow-auto z-[200]">
+    <div class="max-w-3xl mx-auto px-4 py-8">
+        <!-- 头部：总分 + 徽章 -->
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white text-center mb-6">
+            <div class="text-5xl mb-2" id="resultEmoji">🎉</div>
+            <h1 class="text-2xl font-bold mb-2">测评完成！</h1>
+            <div class="text-5xl font-bold my-4"><span id="finalScore">0</span><span class="text-2xl opacity-70">/100</span></div>
+            <div class="text-sm opacity-80" id="resultLevel">—</div>
+        </div>
+
+        <!-- 雷达图 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">📊 各维度能力分析</h2>
+            <div style="height:320px;">
+                <canvas id="radarChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 维度得分明细 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">📈 维度得分明细</h2>
+            <div id="dimensionDetails" class="space-y-3">
+                <!-- 由 JS 填充 -->
+            </div>
+        </div>
+
+        <!-- 错题回顾 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">❌ 错题回顾</h2>
+            <div id="wrongQuestions" class="space-y-4">
+                <!-- 由 JS 填充 -->
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex gap-4 justify-center pb-8">
+            <button onclick="location.reload()" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition">
+                🔄 重新测评
+            </button>
+            <button onclick="goHome()" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition">
+                🏠 返回首页
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// ======================== 真实题库数据（从 MD 题库解析） ========================
+const QUESTIONS = [
+  { num:1, dimension:'技术方案评估', difficulty:3, title:'RAG 优化策略', question:'在做 RAG 产品优化时，以下哪个做法最符合产品经理的思维方式？', options:['同时推进 Query 改写、重排序、生成优化等所有优化策略','先用离线评测定位瓶颈环节，针对性优化，验证在线效果','优先做技术难度最高的优化','根据算法同学的建议选择优化方向'], answer:'B', explanation:'B 是最佳答案。作为 PM，核心职责是发现瓶颈、对齐目标、驱动验证。A 的问题在于多线并行容易失焦；C 的问题在于技术难度高不等于用户价值大；D 的问题在于 PM 应该和算法同学共同决策，而非被动执行。' },
+  { num:2, dimension:'问题诊断', difficulty:3, title:'RAG 难点与坑', question:'在 RAG 项目中遇到"知识库中有答案但检索失败"时，PM 应该如何优先处理？', options:['直接告诉算法同学"召回做得不好"，让他们优化算法','先分析失败 case，区分是"知识库缺失"还是"分块不当"还是"检索策略不匹配"','增加知识库数据量，确保更多问题都能被覆盖','立即优化向量数据库的查询效率'], answer:'B', explanation:'B 是最佳答案。问题诊断是解决问题的前提，只有先拆解问题根源，才能有针对性地优化。A 推诿责任；C 盲目扩充数据；D 忽视了召回本身的质量问题。' },
+  { num:3, dimension:'产品设计', difficulty:3, title:'幻觉问题', question:'在处理 RAG 幻觉问题时，以下哪个方案最全面？', options:['只优化 Prompt，让模型更谨慎地生成','从源头控制（提升召回质量）、生成策略（引用溯源 + 拒答）、监控反馈三个层面综合施策','直接拒绝回答置信度低的问题','增加知识库数据量'], answer:'B', explanation:'B 是最佳答案。幻觉是多因素导致的，需要从源头、过程、监控三个层面综合施策。A 只治标不治本；C 可能导致体验下降；D 盲目加数据未必能解决根本问题。' },
+  { num:4, dimension:'技术方案评估', difficulty:3, title:'Chunks 有效信息分散', question:'在解决"chunks 有效信息分散"问题时，仅仅增大 Chunk Size 会带来什么风险？', options:['可能导致返回的上下文包含大量无关信息','会大幅提升召回成本','模型生成时会更容易幻觉','必然导致知识库无法更新'], answer:'A', explanation:'A 是最佳答案。盲目增大 Chunk Size，虽然能包含更多上下文，但也会引入大量无关信息，反而降低重排序的效果。现代向量库对 Chunk Size 的成本影响不大，与幻觉和知识库更新关系不大。' },
+  { num:5, dimension:'产品设计', difficulty:3, title:'Query 改写 vs 意图识别', question:'用户提问"怎么退订"，系统应该按以下哪个顺序处理最合适？', options:['先 Query 改写成"如何取消订阅" → 然后去知识库检索','先意图识别（判断用户的真实意图是取消还是暂停还是投诉）→ 再针对该意图做 Query 改写 → 最后检索','同时做 Query 改写和意图识别，选择效果最好的','直接去知识库检索，效率最高'], answer:'B', explanation:'B 是最佳答案。意图决定了检索的方向，改写只在同一方向内优化表达。A 改写了表达形式但如果意图理解错了依然答非所问；C 不必要的计算浪费；D 忽视了意图识别的关键作用。' },
+  { num:6, dimension:'数据处理', difficulty:2, title:'知识库数据清洗', question:'在设计 RAG 知识库的数据清洗流程时，以下哪个步骤的顺序是最合理的？', options:['去除重复 → 去噪 → 结构化 → 质量评估 → 入库','去噪 → 去除重复 → 结构化 → 质量评估 → 入库','质量评估 → 去噪 → 去除重复 → 结构化 → 入库','入库 → 然后定期清洗'], answer:'B', explanation:'B 是最佳答案。先去噪（清理噪声）再去重（去除重复），然后结构化处理、质量评估，最后入库。这个顺序符合数据处理的基本逻辑。' },
+  { num:7, dimension:'产品设计', difficulty:3, title:'RAG 长期记忆', question:'在验证"RAG 是否能有效改善长期记忆"时，以下哪个指标最能反映用户的真实体验？', options:['RAG 系统的召回准确率','用户在多轮对话中的留存率和重新激活率','模型生成的文本长度','向量库的查询速度'], answer:'B', explanation:'B 是最佳答案。留存率和重新激活率直接反映用户是否愿意持续使用，是衡量"长期记忆"效果的核心业务指标。技术指标不能直接反映用户真实体验。' },
+  { num:8, dimension:'性能优化', difficulty:2, title:'调用延时定位', question:'在 RAG 系统的总延迟中，以下哪个环节通常占比最大？', options:['用户输入到系统的网络延迟','LLM 生成回答的 token 生成时间','数据库查询的网络往返时间','模型推理前的数据预处理'], answer:'B', explanation:'B 是最佳答案。LLM 生成回答需要逐 token 生成，是串行过程，通常占总延迟的 60%-80%。网络延迟可优化，预处理占比很小。' },
+  { num:9, dimension:'参数调优', difficulty:2, title:'Top-K 参数', question:'在设置 RAG 的 Top-K 参数时，增加 Top-K 从 5 到 20 会带来什么权衡？', options:['只有好处：信息更全面，准确率必然提升','好处是召回率提升，但坏处是可能引入更多噪声，最终需要通过评测找到最优值','会导致性能下降，应该保持越小越好','与生成模型的能力无关'], answer:'B', explanation:'B 是最佳答案。Top-K 增大提升召回率的同时也引入噪声，需要在准确率和召回率之间权衡。没有绝对最优值，需要通过离线评测和在线 AB 测试找到平衡点。' },
+  { num:10, dimension:'架构设计', difficulty:3, title:'多路由架构', question:'在设计企业知识问答的架构时，为什么需要设置多个路由（FAQ / 文档检索 / 知识图谱等）而不是用单一的 RAG？', options:['这样看起来更复杂，技术含量更高','不同的问题类型需要不同的处理方式，单一 RAG 无法覆盖所有场景','为了占用更多的服务器资源','只是为了给面试官留下深刻印象'], answer:'B', explanation:'B 是最佳答案。FAQ 问题适合直接匹配，文档检索适合开放式问题，知识图谱适合结构化查询。单一 RAG 无法高效覆盖所有场景，路由是架构设计的必要环节。' },
+  { num:11, dimension:'评测体系', difficulty:3, title:'模型效果评测流程', question:'在做模型效果评测时，以下哪个流程顺序最科学？', options:['直接做在线AB测试，用真实用户反馈评判模型好坏','离线评测定义标准 → 人工标注数据 → 离线验证 → 灰度上线 → 在线AB测试 → 全量发布','用现成的公开数据集评测','让用户自己反馈哪个模型更好'], answer:'B', explanation:'B 是最佳答案。从离线到在线的科学评测流程：先定义标准和标注数据，离线验证效果，灰度上线验证无副作用，再 AB 测试对比，最后全量发布。避免直接上线的风险。' },
+  { num:12, dimension:'产品机会识别', difficulty:2, title:'AI 赋能场景选择', question:'以下哪个场景最适合首先引入 AI 赋能？', options:['高频、规则明确、有大规模用户、AI 模型有成熟方案','技术最新、最炫酷的场景','用户投诉最多的场景','竞品已经做过的场景'], answer:'A', explanation:'A 是最佳答案。高频+规则明确+用户量大+技术成熟 = ROI 最高、风险最低的切入场景。炫酷不等于有用，投诉多不一定适合 AI，竞品做过不代表自己资源匹配。' },
+  { num:13, dimension:'数据分析', difficulty:2, title:'数据口径与归因', question:'在说"问答率从60%提升到88%"时，最严谨的说法应该是什么？', options:['问答率提升了28个百分点','问答率提升了46.7%（(88-60)/60）','先定义口径（成功回答的定义）、说明分子分母、再说提升28pp，附上提升的主要原因拆解','对比竞品，证明我们提升更多'], answer:'C', explanation:'C 是最佳答案。严谨的数据表达需要先定义口径、说明分子分母、给出绝对提升（pp）和相对提升（%），最后归因分析提升原因。这体现了 PM 的数据素养。' },
+  { num:14, dimension:'工作流设计', difficulty:2, title:'Badcase 归因工作流', question:'在建立 Badcase 自动归因工作流时，以下哪个方案最完整？', options:['收集 Badcase → 手工分类 → 对接相应团队','收集 Badcase → 用 LLM 自动分类原因 → 路由到改进 pipeline（补知识库/调召回/改 prompt） → 效果验证','收集 Badcase → 直接加入训练集重新训练模型','不需要处理 Badcase，模型够好就不会出错'], answer:'B', explanation:'B 是最佳答案。完整的闭环：收集 → 自动分类 → 路由到不同改进方向 → 效果验证。这个工作流能持续优化 RAG 系统，避免 Badcase 积累。' },
+  { num:15, dimension:'Agent 架构', difficulty:3, title:'Agent 演进方向', question:'Agent 从当前的"通用助手"演进到下一阶段，最可能的方向是什么？', options:['技术能力继续堆叠，模型越来越大','从通用 → 垂直专家（代码/销售/客服等）+ 多 Agent 协作，重点在可控性和可靠性','完全自主化，完全不需要人类干预','回归对话机器人，Agent 只是阶段性产物'], answer:'B', explanation:'B 是最佳答案。通用 Agent 难以落地，垂直化+多 Agent 协作才是真正的产品化路径。垂直领域聚焦可控性，多 Agent 分工提升可靠性。' },
+  { num:16, dimension:'Agent 架构', difficulty:3, title:'Agent 幻觉工具调用', question:'当 Agent 因为"幻觉工具调用"而规划失败时，最直接的解决方案是什么？', options:['增加模型参数或换更强的模型','用 CoT 引导逐步推理 + 工具描述规范化 + Fallback 策略','不用 Agent，用 Workflow 替代','增加训练数据'], answer:'B', explanation:'B 是最佳答案。幻觉工具调用的根源是规划出错。CoT 引导逐步推理减少跳跃错误；工具描述规范化让模型准确理解工具能力；Fallback 策略在调用失败时有兜底方案。' },
+  { num:17, dimension:'模型选型', difficulty:2, title:'指令模型 vs 推理模型', question:'对于"请帮我分析这份财务报表并给出投资建议"这个任务，应该用什么模型？', options:['指令模型，因为更快','推理模型，因为需要多步逻辑推理','都可以，取决于成本预算','混合模型'], answer:'B', explanation:'B 是最佳答案。分析财务报表需要多步推理（理解报表数据 → 识别异常 → 分析趋势 → 给出建议），推理模型（如 o1/o3、Claude Opus）更适合这类需要深度思考的任务。' },
+  { num:18, dimension:'业务洞察', difficulty:2, title:'新业务上手', question:'新上手一个业务，最应该优先做什么？', options:['读所有的产品文档和数据报告','和核心干系人访谈，理解业务现状和问题','提出自己的改进方案','先观察用户，不要干扰现有流程'], answer:'B', explanation:'B 是最佳答案。文档和数据是静态的，干系人访谈才能理解真实的业务现状、痛点和隐性知识。先理解问题才能提出方案。2-4 周可以快速上手基本面。' }
+];
+
+// 题库来源：优先从后端 /api/questions 获取，失败则使用内置题库兜底
+let QUESTIONS_READY = false;
+(async function loadQuestionsFromBackend() {
+    try {
+        const resp = await fetch('/api/questions');
+        if (resp.ok) {
+            const remote = await resp.json();
+            if (Array.isArray(remote) && remote.length > 0) {
+                QUESTIONS.length = 0;
+                remote.forEach(q => QUESTIONS.push({
+                    num: q.num, dimension: q.dimension, difficulty: q.difficulty,
+                    title: q.title || q.dimension, question: q.question,
+                    options: q.options, answer: q.answer, explanation: q.explanation
+                }));
+                QUESTIONS_READY = true;
+                console.log('[题库] 已从后端加载 ' + QUESTIONS.length + ' 题');
+                // 若测评已初始化且用户尚未作答，用新题库中同题号的对象重渲染（避免引用旧数组）
+                try {
+                    if (typeof quizState !== 'undefined' && currentQuestion &&
+                        quizState.answered.length === 0 && !currentSelection) {
+                        const fresh = QUESTIONS.find(qq => qq.num === currentQuestion.num);
+                        if (fresh) renderQuestion(fresh);
+                    }
+                } catch(re) { /* 重渲染失败不影响答题 */ }
+                return;
+            }
+        }
+    } catch(e) { console.warn('[题库] 后端加载失败，使用内置题库:', e.message); }
+    QUESTIONS_READY = true;
+})();
+
+// ======================== 状态 ========================
+let selectedText = '';
+let selectedRange = null;
+let isLoading = false;
+const explanationCache = {};
+
+// CAT 引擎状态
+let quizState = {
+    currentIdx: 0,
+    answered: [],          // 已答题号
+    correctMap: {},        // 记录每道已答题的对错：{num: true/false/null(跳过)}
+    skippedNums: [],       // 跳过的题号（不计分也不计对错）
+    score: 50,
+    dimensionStats: {}     // 各维度统计
+};
+
+// 当前选中的答案
+let currentSelection = null;
+
+// ======================== LLM 调用（走后端代理，密钥不出前端） ========================
+const API_BASE = ''; // 同源部署，留空即可
+const GUEST_TOKEN_KEY = 'ai_pm_coach_guest_token';
+let _guestToken = localStorage.getItem(GUEST_TOKEN_KEY);
+
+async function getGuestToken(forceRefresh) {
+    if (!forceRefresh && _guestToken) return _guestToken;
+    const resp = await fetch(API_BASE + '/api/auth/guest', { method: 'POST' });
+    if (!resp.ok) throw new Error('访客认证失败');
+    const data = await resp.json();
+    _guestToken = data.token;
+    localStorage.setItem(GUEST_TOKEN_KEY, _guestToken);
+    return _guestToken;
+}
+
+// 启动时预热访客 token
+getGuestToken().then(() => console.log('[认证] 访客 token 就绪')).catch(() => {});
+
+async function fetchExplanation(term, context) {
+    if (explanationCache[term]) return explanationCache[term];
+
+    async function callApi(token) {
+        return fetch(API_BASE + '/api/explain', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({ term, context: context || '' })
+        });
+    }
+
+    let token = await getGuestToken();
+    let resp = await callApi(token);
+
+    // token 过期则刷新一次重试
+    if (resp.status === 401) {
+        token = await getGuestToken(true);
+        resp = await callApi(token);
+    }
+
+    if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || `LLM 调用失败 (${resp.status})`);
+    }
+
+    const data = await resp.json();
+    const content = data.content || '抱歉，未能获取到解释。';
+    explanationCache[term] = content;
+    return content;
+}
+
+// ======================== 文本选中检测 ========================
+function handleSelection() {
+    const sel = window.getSelection();
+    const text = sel.toString().trim();
+
+    // 有效词语：2-30字符，且选区不为空
+    if (text.length > 1 && text.length <= 30 && sel.rangeCount > 0) {
+        selectedText = text;
+        selectedRange = sel.getRangeAt(0);
+
+        const rect = selectedRange.getBoundingClientRect();
+        const icon = document.getElementById('queryIcon');
+
+        // 计算图标位置（选中区域上方居中）
+        let iconLeft = rect.left + rect.width / 2 - 18;
+        let iconTop = rect.top - 44;
+
+        // 边界处理
+        if (iconLeft < 8) iconLeft = 8;
+        if (iconLeft > window.innerWidth - 44) iconLeft = window.innerWidth - 44;
+        if (iconTop < 8) iconTop = rect.bottom + 8; // 上方不够则显示在下方
+
+        icon.style.left = iconLeft + 'px';
+        icon.style.top = iconTop + 'px';
+        icon.classList.add('visible');
+    } else {
+        hideQueryIcon();
+    }
+}
+
+function hideQueryIcon() {
+    const icon = document.getElementById('queryIcon');
+    icon.classList.remove('visible');
+}
+
+// 绑定选中事件
+document.addEventListener('mouseup', handleSelection);
+document.addEventListener('touchend', () => setTimeout(handleSelection, 150));
+document.addEventListener('mousedown', (e) => {
+    const icon = document.getElementById('queryIcon');
+    if (icon && !icon.contains(e.target) && !document.getElementById('explanationPopup').contains(e.target)) {
+        hideQueryIcon();
+    }
+});
+
+// ======================== 查询图标点击 ========================
+document.getElementById('queryIcon').addEventListener('click', () => {
+    if (selectedText) {
+        showExplanationPanel(selectedText);
+        hideQueryIcon();
+        window.getSelection()?.removeAllRanges();
+    }
+});
+
+// ======================== 解释弹框 ========================
+function showExplanationPanel(term) {
+    isLoading = true;
+    const popup = document.getElementById('explanationPopup');
+    const mask = document.getElementById('explanationMask');
+    const termEl = document.getElementById('explanationTerm');
+    const body = document.getElementById('explanationBody');
+    const footer = document.getElementById('explanationFooter');
+
+    // 显示遮罩
+    mask.classList.add('active');
+
+    // 显示弹框
+    popup.style.display = 'flex';
+    popup.style.flexDirection = 'column';
+
+    // 计算位置（屏幕中央偏上）
+    const popupWidth = Math.min(420, window.innerWidth - 32);
+    const popupHeight = 500;
+    popup.style.left = Math.max(16, (window.innerWidth - popupWidth) / 2) + 'px';
+    popup.style.top = Math.max(60, (window.innerHeight - popupHeight) / 2) + 'px';
+    popup.style.width = popupWidth + 'px';
+
+    termEl.textContent = term;
+    footer.style.display = 'none';
+
+    // 检查缓存
+    if (explanationCache[term]) {
+        body.innerHTML = `<div class="explanation-content">${escapeHtml(explanationCache[term])}</div>`;
+        footer.style.display = 'flex';
+        updateStarButton(term);
+        isLoading = false;
+        return;
+    }
+
+    // 加载状态
+    body.innerHTML = `
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <div class="text-sm">AI 正在查询 "${term}" ...</div>
+        </div>
+    `;
+
+    // 调用 API
+    fetchExplanation(term)
+        .then(content => {
+            if (!isLoading) return;
+            body.innerHTML = `<div class="explanation-content">${formatContent(content)}</div>`;
+            footer.style.display = 'flex';
+            updateStarButton(term);
+        })
+        .catch(err => {
+            if (!isLoading) return;
+            console.error('查询失败:', err);
+            body.innerHTML = `
+                <div class="error-state">
+                    <div class="error-emoji">😕</div>
+                    <div class="error-msg">查询失败</div>
+                    <div class="error-detail">${escapeHtml(err.message)}</div>
+                </div>
+            `;
+            // 仍然显示重新查询按钮
+            footer.style.display = 'flex';
+        })
+        .finally(() => {
+            isLoading = false;
+        });
+}
+
+function closeExplanationPanel() {
+    isLoading = false;
+    document.getElementById('explanationMask').classList.remove('active');
+    document.getElementById('explanationPopup').style.display = 'none';
+    hideQueryIcon();
+}
+
+// 关闭按钮
+document.getElementById('explanationCloseBtn').addEventListener('click', closeExplanationPanel);
+document.getElementById('explanationMask').addEventListener('click', closeExplanationPanel);
+
+// 重新查询
+document.getElementById('requeryBtn').addEventListener('click', () => {
+    if (selectedText) {
+        delete explanationCache[selectedText];
+        showExplanationPanel(selectedText);
+    }
+});
+
+// ESC 关闭
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeExplanationPanel();
+});
+
+// ======================== 工具函数 ========================
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+// 简单的 Markdown 格式化（处理 **加粗** 和换行）
+function formatContent(text) {
+    let html = escapeHtml(text);
+    // **加粗**
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // 处理 emoji
+    return html;
+}
+
+// ======================== CAT 选题引擎 ========================
+// 简单 CAT：优先选未答维度的题，维持维度覆盖均衡
+function selectNextQuestion() {
+    const answeredNums = new Set(quizState.answered);
+    const available = QUESTIONS.filter(q => !answeredNums.has(q.num));
+
+    if (available.length === 0) {
+        // 全部答完
+        return null;
+    }
+
+    // 统计已答维度
+    const dimCount = {};
+    quizState.answered.forEach(n => {
+        const q = QUESTIONS.find(qq => qq.num === n);
+        if (q) dimCount[q.dimension] = (dimCount[q.dimension] || 0) + 1;
+    });
+
+    // 优先选最少答过的维度
+    available.sort((a, b) => {
+        const da = dimCount[a.dimension] || 0;
+        const db = dimCount[b.dimension] || 0;
+        if (da !== db) return da - db;
+        return a.num - b.num;
+    });
+
+    return available[0];
+}
+
+// ======================== 渲染题目 ========================
+let currentQuestion = null;
+
+function renderQuestion(q) {
+    currentQuestion = q;
+    currentSelection = null;
+    const answered = quizState.answered.includes(q.num);
+
+    // 更新 CAT 状态卡片
+    document.getElementById('dimensionDisplay').textContent = q.dimension;
+    const difficultyBadge = document.getElementById('difficultyBadge');
+    difficultyBadge.className = `difficulty-badge difficulty-${q.difficulty}`;
+    difficultyBadge.innerHTML = `<span>●</span><span>${q.difficulty}</span>`;
+    document.getElementById('answeredCount').textContent = quizState.answered.length;
+    // 同步更新两处分数显示（header + CAT状态卡片）
+    document.getElementById('scoreDisplay').textContent = quizState.score;
+    document.getElementById('scoreDisplayCard').textContent = quizState.score;
+    document.getElementById('selectionReason').innerHTML =
+        `<strong>选题理由：</strong>维度"${q.dimension}"已答${quizState.answered.filter(n => QUESTIONS.find(qq => qq.num === n)?.dimension === q.dimension).length}题，当前难度${q.difficulty}`;
+
+    // 渲染题目卡片
+    const card = document.getElementById('questionCard');
+    const labels = ['A', 'B', 'C', 'D'];
+    card.innerHTML = `
+        <div class="bg-gray-50 border-b border-gray-200 px-5 py-3">
+            <span class="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 rounded-md text-sm font-medium selectable">
+                ${q.dimension}
+            </span>
+        </div>
+        <div class="px-6 pt-6 pb-4">
+            <h2 class="text-xl md:text-2xl font-bold text-gray-900 leading-relaxed selectable">
+                ${q.question}
+            </h2>
+        </div>
+        <div class="px-6 pb-6 space-y-3">
+            ${q.options.map((opt, i) => `
+                <label class="option-card border-2 border-gray-200 rounded-xl p-4 cursor-pointer flex items-start gap-3" data-value="${labels[i]}">
+                    <input type="radio" name="answer" value="${labels[i]}" class="mt-1.5 w-4 h-4 accent-indigo-600" ${answered && labels[i] === q.answer ? 'checked' : ''}>
+                    <span class="selectable text-gray-700 leading-relaxed">${labels[i]}. ${opt}</span>
+                </label>
+            `).join('')}
+        </div>
+    `;
+
+    // 绑定选项点击
+    card.querySelectorAll('.option-card').forEach(cardEl => {
+        cardEl.addEventListener('click', () => {
+            if (isCurrentAnswered()) return; // 已答完不再允许改
+            card.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+            cardEl.classList.add('selected');
+            currentSelection = cardEl.dataset.value;
+            updateNextBtn();
+        });
+    });
+
+    // 已答题：展示对错标记
+    if (answered) {
+        showAnswerResult(q, null, false);
+    } else {
+        // 隐藏上一题解析
+        document.getElementById('answerExplanation').classList.add('hidden');
+    }
+
+    // 重置底部按钮状态（新题未选择 → 置灰"提交答案"）
+    updateNextBtn();
+}
+
+// ======================== 展示答题结果 ========================
+function showAnswerResult(q, selected, submitMode) {
+    const labels = ['A', 'B', 'C', 'D'];
+    const card = document.getElementById('questionCard');
+
+    // 标记对错
+    card.querySelectorAll('.option-card').forEach((cardEl, i) => {
+        const val = labels[i];
+        cardEl.style.pointerEvents = 'none';
+        cardEl.classList.remove('cursor-pointer');
+        cardEl.classList.remove('selected');
+        // 重置原生 radio 的 checked 属性（关键！浏览器原生选中不会自动取消）
+        const radio = cardEl.querySelector('input[type="radio"]');
+        if (radio) radio.checked = false;
+
+        if (val === q.answer) {
+            cardEl.classList.add('correct');
+        } else if (val === selected) {
+            cardEl.classList.add('wrong');
+        }
+    });
+
+    // 展示解析面板
+    const explanationDiv = document.getElementById('answerExplanation');
+    const box = document.getElementById('explanationBox');
+    const icon = document.getElementById('explanationIcon');
+    const title = document.getElementById('explanationTitle');
+    const text = document.getElementById('explanationText');
+
+    const isCorrect = selected === q.answer;
+    box.className = 'rounded-xl p-5 border-2 ' + (isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50');
+    icon.textContent = isCorrect ? '✅' : '❌';
+    title.textContent = isCorrect ? '回答正确！' : `回答错误，正确答案是 ${q.answer}`;
+    text.textContent = q.explanation;
+
+    explanationDiv.classList.remove('hidden');
+
+    // 底部按钮切换为"下一题"（由状态机统一管理）
+    updateNextBtn();
+}
+
+// ======================== 底部按钮：单一状态机 ========================
+// 按钮三态：未选择(置灰"提交答案") → 已选择(激活"提交答案") → 已提交("下一题"/"全部完成")
+const BTN_DISABLED_CLS = 'px-6 py-2.5 bg-gray-200 text-gray-400 rounded-lg font-medium text-sm cursor-not-allowed transition';
+const BTN_ACTIVE_CLS = 'px-6 py-2.5 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 cursor-pointer transition';
+
+function isCurrentAnswered() {
+    return !!(currentQuestion && quizState.answered.includes(currentQuestion.num));
+}
+
+// 统一更新底部按钮（所有状态变化只走这里，保证状态实时同步）
+function updateNextBtn() {
+    const btn = document.getElementById('nextBtn');
+    if (isCurrentAnswered()) {
+        // 已提交 → 下一题
+        const hasMore = quizState.answered.length < QUESTIONS.length;
+        btn.disabled = false;
+        btn.textContent = hasMore ? '下一题' : '全部完成';
+        btn.className = BTN_ACTIVE_CLS;
+    } else if (currentSelection) {
+        // 已选择未提交 → 激活"提交答案"
+        btn.disabled = false;
+        btn.textContent = '提交答案';
+        btn.className = BTN_ACTIVE_CLS;
+    } else {
+        // 未选择 → 置灰禁用
+        btn.disabled = true;
+        btn.textContent = '提交答案';
+        btn.className = BTN_DISABLED_CLS;
+    }
+}
+
+// Toast 提示
+let toastTimer = null;
+function showToast(msg) {
+    const toast = document.getElementById('answerToast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+document.getElementById('skipBtn').addEventListener('click', () => {
+    if (!currentQuestion) return;
+    // 已答题不能再跳过
+    if (isCurrentAnswered()) {
+        showToast('本题已提交，无法跳过');
+        updateNextBtn(); // 同步按钮状态，让用户看到"下一题/全部完成"
+        return;
+    }
+    // 跳过：标记为已答（不计分），直接下一题
+    quizState.answered.push(currentQuestion.num);
+    quizState.skippedNums.push(currentQuestion.num);
+    quizState.correctMap[currentQuestion.num] = null;
+    currentSelection = null; // 清掉选中状态，防止残留
+    const next = selectNextQuestion();
+    if (next) {
+        renderQuestion(next);
+    } else {
+        showFinalResult();
+    }
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+    if (!currentQuestion) return;
+
+    // 校验：未选择答案 → 提示"请选择答案"并阻止进入下一题
+    if (!isCurrentAnswered() && !currentSelection) {
+        showToast('请选择答案');
+        return;
+    }
+
+    // 状态2：已选择未提交 → 提交答案
+    if (!isCurrentAnswered()) {
+        const isCorrect = currentSelection === currentQuestion.answer;
+        quizState.score = Math.max(0, Math.min(100, quizState.score + (isCorrect ? 5 : -3)));
+        quizState.answered.push(currentQuestion.num);
+        quizState.correctMap[currentQuestion.num] = isCorrect;
+        showAnswerResult(currentQuestion, currentSelection, true);
+        return;
+    }
+
+    // 状态3：已提交 → 进入下一题
+    const next = selectNextQuestion();
+    if (next) {
+        renderQuestion(next);
+    } else {
+        showFinalResult();
+    }
+});
+
+// ======================== 初始化 ========================
+const initQuestion = selectNextQuestion();
+if (initQuestion) {
+    renderQuestion(initQuestion);
+} else {
+    document.getElementById('questionCard').innerHTML =
+        '<div class="p-12 text-center text-gray-500"><div class="text-4xl mb-4">🎉</div>所有题目已完成！</div>';
+}
+
+// ======================== 结果总结页面 ========================
+let radarChartInstance = null;
+
+function showFinalResult() {
+    // 用精确数据统计各维度
+    const dimStats = {};
+    const allDims = new Set(QUESTIONS.map(q => q.dimension));
+    allDims.forEach(dim => {
+        dimStats[dim] = { total: 0, answered: 0, correct: 0, skipped: 0, wrong: 0 };
+    });
+    QUESTIONS.forEach(q => {
+        if (dimStats[q.dimension]) dimStats[q.dimension].total++;
+    });
+
+    // 遍历已答题，用 correctMap 精确统计
+    quizState.answered.forEach(num => {
+        const q = QUESTIONS.find(qq => qq.num === num);
+        if (!q || !dimStats[q.dimension]) return;
+        dimStats[q.dimension].answered++;
+        const result = quizState.correctMap[num];
+        if (result === true) dimStats[q.dimension].correct++;
+        else if (result === false) dimStats[q.dimension].wrong++;
+        else if (result === null) dimStats[q.dimension].skipped++;
+    });
+
+    // 计算各维度百分制得分（答对率映射到 50-100 区间，跳过不计入分母）
+    const dimPercentages = {};
+    const dimList = Object.keys(dimStats);
+    dimList.forEach(dim => {
+        const s = dimStats[dim];
+        const有效答 = s.correct + s.wrong; // 排除跳过
+        if (有效答 > 0) {
+            // 基础分 50 + 答对率 * 50
+            dimPercentages[dim] = Math.round(50 + 50 * (s.correct / 有效答));
+        } else if (s.skipped > 0) {
+            // 全部跳过：给 40 分警示
+            dimPercentages[dim] = 40;
+        } else {
+            // 未答：50 分
+            dimPercentages[dim] = 50;
+        }
+    });
+
+    // 更新 DOM
+    document.getElementById('finalScore').textContent = quizState.score;
+
+    // 等级徽章
+    const score = quizState.score;
+    let levelEmoji = '🎉', levelText = '';
+    if (score >= 90) { levelEmoji = '🏆'; levelText = '优秀！你是 AI PM 领域的专家'; }
+    else if (score >= 75) { levelEmoji = '🌟'; levelText = '良好！扎实的产品经理基础'; }
+    else if (score >= 60) { levelEmoji = '💪'; levelText = '及格！继续努力提升'; }
+    else { levelEmoji = '📚'; levelText = '需要加强学习，加油！'; }
+    document.getElementById('resultEmoji').textContent = levelEmoji;
+    document.getElementById('resultLevel').textContent = levelText;
+
+    // 维度得分明细
+    const dimDetailsHtml = dimList.map(dim => {
+        const pct = dimPercentages[dim];
+        const s = dimStats[dim];
+        const barColor = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-500' : 'bg-red-500';
+        const subText = `正确 ${s.correct} / 错 ${s.wrong} / 跳过 ${s.skipped}（共 ${s.total} 题）`;
+        return `
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <div class="text-sm text-gray-700 font-medium">${dim}</div>
+                    <div>
+                        <span class="font-bold text-indigo-600">${pct}</span>
+                        <span class="text-gray-400 text-sm">分</span>
+                    </div>
+                </div>
+                <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden mb-1">
+                    <div class="${barColor} h-full rounded-full transition-all" style="width:${pct}%"></div>
+                </div>
+                <div class="text-xs text-gray-400">${subText}</div>
+            </div>
+        `;
+    }).join('');
+    document.getElementById('dimensionDetails').innerHTML = dimDetailsHtml;
+
+    // 错题回顾（精确数据：答错的题）
+    const wrongHtml = (function() {
+        const wrongNums = Object.keys(quizState.correctMap)
+            .filter(num => quizState.correctMap[num] === false)
+            .map(num => parseInt(num));
+        if (wrongNums.length === 0) {
+            return '<div class="text-center text-gray-500 py-6">🎉 太棒了！全部答对，没有错题！</div>';
+        }
+        return wrongNums.map(num => {
+            const q = QUESTIONS.find(qq => qq.num === num);
+            if (!q) return '';
+            return `
+                <div class="border border-red-200 bg-red-50 rounded-lg p-4">
+                    <div class="flex items-start gap-2 mb-2">
+                        <span class="px-2 py-0.5 bg-indigo-100 text-indigo-600 text-xs rounded font-medium">${q.dimension}</span>
+                        <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded">难度 ${q.difficulty}</span>
+                        <span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded">答错</span>
+                    </div>
+                    <div class="font-medium text-gray-900 mb-2">${q.question}</div>
+                    <div class="text-sm text-gray-600">
+                        <div class="mb-1"><strong class="text-green-600">正确答案：${q.answer}</strong></div>
+                        <div class="text-gray-700 leading-relaxed">${q.explanation}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    })();
+    document.getElementById('wrongQuestions').innerHTML = wrongHtml;
+
+    // 绘制雷达图
+    const radarLabels = dimList;
+    const radarData = radarLabels.map(d => dimPercentages[d]);
+    if (radarChartInstance) { radarChartInstance.destroy(); radarChartInstance = null; }
+    const ctx = document.getElementById('radarChart');
+    if (ctx && typeof Chart !== 'undefined') {
+        radarChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: radarLabels,
+                datasets: [{
+                    label: '能力得分',
+                    data: radarData,
+                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(99, 102, 241, 1)',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { stepSize: 20, color: '#9ca3af', backdropColor: 'transparent' },
+                        grid: { color: '#e5e7eb' },
+                        angleLines: { color: '#e5e7eb' },
+                        pointLabels: { font: { size: 12 }, color: '#374151' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.raw} 分`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 隐藏答题界面，显示结果页
+    document.querySelector('.min-h-screen.flex.flex-col').style.display = 'none';
+    document.getElementById('finalResult').classList.remove('hidden');
+    // 滚动到顶部
+    window.scrollTo(0, 0);
+}
+
+// ======================== 收藏词库（localStorage 持久化）========================
+const GLOSSARY_KEY = 'ai_pm_coach_glossary';
+
+// 读取收藏列表
+function getGlossary() {
+    try {
+        const raw = localStorage.getItem(GLOSSARY_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+// 写入收藏列表
+function saveGlossary(list) {
+    localStorage.setItem(GLOSSARY_KEY, JSON.stringify(list));
+}
+
+// 检查某词是否已收藏
+function isFavorited(term) {
+    return getGlossary().some(item => item.term === term);
+}
+
+// 收藏/取消收藏（覆盖式：同词只保留最新解释）
+function toggleFavorite(term, explanation) {
+    let list = getGlossary();
+    const idx = list.findIndex(item => item.term === term);
+
+    if (idx >= 0) {
+        list.splice(idx, 1);
+        saveGlossary(list);
+        renderGlossaryList();
+        updateGlossaryCount();
+        updateStarButton(term);
+        return false;
+    } else {
+        list.unshift({ term, explanation, timestamp: Date.now() });
+        saveGlossary(list);
+        renderGlossaryList();
+        updateGlossaryCount();
+        updateStarButton(term);
+        return true;
+    }
+}
+
+// 更新星标按钮状态
+function updateStarButton(term) {
+    const starBtn = document.getElementById('starBtn');
+    if (isFavorited(term)) {
+        starBtn.classList.add('active');
+        starBtn.title = '取消收藏';
+    } else {
+        starBtn.classList.remove('active');
+        starBtn.title = '收藏到词库';
+    }
+}
+
+// 更新触发条计数
+function updateGlossaryCount() {
+    const count = getGlossary().length;
+    const el = document.getElementById('glossaryCount');
+    if (count > 0) {
+        el.textContent = count;
+        el.style.display = 'flex';
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+// 渲染词库列表（倒序：最近添加在最上方）
+function renderGlossaryList() {
+    const list = getGlossary();
+    const container = document.getElementById('glossaryList');
+
+    if (list.length === 0) {
+        container.innerHTML = `
+            <div class="glossary-empty">
+                <div class="glossary-empty-icon">📭</div>
+                <div>还没有收藏的词汇</div>
+                <div style="font-size:12px; margin-top:6px;">查询词语后点击 ★ 收藏</div>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = list.map(item => {
+        const time = new Date(item.timestamp);
+        const timeStr = `${time.getMonth()+1}/${time.getDate()} ${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}`;
+        return `
+            <div class="glossary-item" data-term="${escapeHtml(item.term)}">
+                <div class="glossary-item-term">${escapeHtml(item.term)}</div>
+                <div class="glossary-item-time">收藏于 ${timeStr}</div>
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.glossary-item').forEach(el => {
+        el.addEventListener('click', () => {
+            const term = el.dataset.term;
+            const item = list.find(i => i.term === term);
+            if (item) {
+                closeGlossaryPanel();
+                showFavoritedExplanation(item.term, item.explanation);
+            }
+        });
+    });
+}
+
+// 展示已收藏的词汇解释（直接用本地数据，不调用 API）
+function showFavoritedExplanation(term, explanation) {
+    const popup = document.getElementById('explanationPopup');
+    const mask = document.getElementById('explanationMask');
+    const termEl = document.getElementById('explanationTerm');
+    const body = document.getElementById('explanationBody');
+    const footer = document.getElementById('explanationFooter');
+
+    isLoading = false;
+
+    mask.classList.add('active');
+    popup.style.display = 'flex';
+    popup.style.flexDirection = 'column';
+
+    const popupWidth = Math.min(420, window.innerWidth - 32);
+    const popupHeight = 500;
+    popup.style.left = Math.max(16, (window.innerWidth - popupWidth) / 2) + 'px';
+    popup.style.top = Math.max(60, (window.innerHeight - popupHeight) / 2) + 'px';
+    popup.style.width = popupWidth + 'px';
+
+    termEl.textContent = term;
+    body.innerHTML = `<div class="explanation-content">${formatContent(explanation)}</div>`;
+    footer.style.display = 'flex';
+
+    explanationCache[term] = explanation;
+    selectedText = term;
+    updateStarButton(term);
+}
+
+// ======================== 词库面板交互 ========================
+function openGlossaryPanel() {
+    document.getElementById('glossaryPanel').classList.add('open');
+    document.getElementById('glossaryOverlay').classList.add('active');
+    renderGlossaryList();
+}
+
+function closeGlossaryPanel() {
+    document.getElementById('glossaryPanel').classList.remove('open');
+    document.getElementById('glossaryOverlay').classList.remove('active');
+}
+
+document.getElementById('glossaryTrigger').addEventListener('click', openGlossaryPanel);
+document.getElementById('glossaryCloseBtn').addEventListener('click', closeGlossaryPanel);
+document.getElementById('glossaryOverlay').addEventListener('click', closeGlossaryPanel);
+
+// ======================== 星标按钮点击 ========================
+document.getElementById('starBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const term = document.getElementById('explanationTerm').textContent;
+    const bodyEl = document.getElementById('explanationBody');
+    const contentEl = bodyEl.querySelector('.explanation-content');
+    if (!contentEl) return;
+
+    const explanation = explanationCache[term] || contentEl.textContent;
+    toggleFavorite(term, explanation);
+});
+
+// ======================== 初始化 ========================
+updateGlossaryCount();
+renderGlossaryList();
+
+// ======================== 视图切换 ========================
+function startQuiz() {
+    document.getElementById('homeView').classList.add('hidden');
+    document.getElementById('quizView').classList.remove('hidden');
+    document.getElementById('finalResult').classList.add('hidden');
+    // 如果是首次进入，CAT 引擎已经初始化好了；如果是重新测评，reset 一下
+    if (quizState.answered.length > 0) {
+        // 重新测评：reset 状态
+        quizState = { currentIdx: 0, answered: [], correctMap: {}, skippedNums: [], score: 50, dimensionStats: {} };
+        currentSelection = null;
+        const init = selectNextQuestion();
+        if (init) renderQuestion(init);
+    }
+    window.scrollTo(0, 0);
+}
+
+function goHome() {
+    document.getElementById('finalResult').classList.add('hidden');
+    document.getElementById('quizView').classList.add('hidden');
+    document.getElementById('homeView').classList.remove('hidden');
+    // reset 测评状态，下次开始是全新测评
+    quizState = { currentIdx: 0, answered: [], correctMap: {}, skippedNums: [], score: 50, dimensionStats: {} };
+    currentSelection = null;
+    window.scrollTo(0, 0);
+}
+</script>
+
+</div><!-- /quizView -->
 </body>
 </html>
