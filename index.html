@@ -734,9 +734,28 @@
         <!-- 头部：总分 + 徽章 -->
         <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white text-center mb-6">
             <div class="text-5xl mb-2" id="resultEmoji">🎉</div>
-            <h1 class="text-2xl font-bold mb-2">测评完成！</h1>
-            <div class="text-5xl font-bold my-4"><span id="finalScore">0</span><span class="text-2xl opacity-70">/100</span></div>
-            <div class="text-sm opacity-80" id="resultLevel">—</div>
+            <h1 class="text-2xl font-bold mb-4">测评完成！</h1>
+            <div class="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                <div class="bg-white/15 rounded-xl p-4">
+                    <div class="text-xs opacity-80 mb-1">正确率</div>
+                    <div class="text-2xl font-bold" id="resultAccuracy">0.0%</div>
+                </div>
+                <div class="bg-white/15 rounded-xl p-4">
+                    <div class="text-xs opacity-80 mb-1">完成度</div>
+                    <div class="text-2xl font-bold" id="resultCompletion">0/18</div>
+                </div>
+            </div>
+            <!-- 详细答题数据 -->
+            <div class="mt-4 text-sm opacity-90">
+                <span>总题数 <strong id="detailTotal">18</strong></span>
+                <span class="mx-2 opacity-50">·</span>
+                <span>答对 <strong id="detailCorrect">0</strong></span>
+                <span class="mx-2 opacity-50">·</span>
+                <span>答错 <strong id="detailWrong">0</strong></span>
+                <span class="mx-2 opacity-50">·</span>
+                <span>跳过 <strong id="detailSkipped">0</strong></span>
+            </div>
+            <div class="mt-3 text-xs opacity-70" id="resultLevel">—</div>
         </div>
 
         <!-- 雷达图 -->
@@ -1324,33 +1343,54 @@ function showFinalResult() {
         else if (result === null) dimStats[q.dimension].skipped++;
     });
 
-    // 计算各维度百分制得分（答对率映射到 50-100 区间，跳过不计入分母）
+    // 全局统计
+    const TOTAL = QUESTIONS.length;
+    let totalCorrect = 0, totalWrong = 0, totalSkipped = 0;
+    QUESTIONS.forEach(q => {
+        const r = quizState.correctMap[q.num];
+        if (r === true) totalCorrect++;
+        else if (r === false) totalWrong++;
+        else totalSkipped++;
+    });
+    const validAnswered = totalCorrect + totalWrong;
+    // 正确率：答对/(答对+答错)，保留一位小数
+    const accuracy = validAnswered > 0 ? (100 * totalCorrect / validAnswered) : null;
+    // 完成度：(答对+答错)/总题数
+    const completed = validAnswered;
+
+    // 计算各维度得分：答对率 × 100，跳过给 0 分
     const dimPercentages = {};
     const dimList = Object.keys(dimStats);
     dimList.forEach(dim => {
         const s = dimStats[dim];
-        const validCount = s.correct + s.wrong; // 排除跳过
-        if (validCount > 0) {
-            // 基础分 50 + 答对率 * 50
-            dimPercentages[dim] = Math.round(50 + 50 * (s.correct / validCount));
-        } else if (s.skipped > 0) {
-            // 全部跳过：给 40 分警示
-            dimPercentages[dim] = 40;
+        const valid = s.correct + s.wrong;
+        if (valid > 0) {
+            dimPercentages[dim] = Math.round(100 * s.correct / valid);
         } else {
-            // 未答：50 分
-            dimPercentages[dim] = 50;
+            dimPercentages[dim] = 0; // 全部跳过给 0 分
         }
     });
 
-    // 更新 DOM
-    document.getElementById('finalScore').textContent = quizState.score;
+    // 更新头部统计面板
+    const accEl = document.getElementById('resultAccuracy');
+    if (accuracy !== null) {
+        accEl.textContent = accuracy.toFixed(1) + '%';
+    } else {
+        accEl.textContent = '—';
+    }
+    document.getElementById('resultCompletion').textContent = completed + '/' + TOTAL;
+    document.getElementById('detailTotal').textContent = TOTAL;
+    document.getElementById('detailCorrect').textContent = totalCorrect;
+    document.getElementById('detailWrong').textContent = totalWrong;
+    document.getElementById('detailSkipped').textContent = totalSkipped;
 
-    // 等级徽章
-    const score = quizState.score;
+    // 等级徽章（基于正确率）
     let levelEmoji = '🎉', levelText = '';
-    if (score >= 90) { levelEmoji = '🏆'; levelText = '优秀！你是 AI PM 领域的专家'; }
-    else if (score >= 75) { levelEmoji = '🌟'; levelText = '良好！扎实的产品经理基础'; }
-    else if (score >= 60) { levelEmoji = '💪'; levelText = '及格！继续努力提升'; }
+    if (accuracy === null) {
+        levelEmoji = '📚'; levelText = '无有效答题，请至少答一题';
+    } else if (accuracy >= 90) { levelEmoji = '🏆'; levelText = '优秀！你是 AI PM 领域的专家'; }
+    else if (accuracy >= 75) { levelEmoji = '🌟'; levelText = '良好！扎实的产品经理基础'; }
+    else if (accuracy >= 60) { levelEmoji = '💪'; levelText = '及格！继续努力提升'; }
     else { levelEmoji = '📚'; levelText = '需要加强学习，加油！'; }
     document.getElementById('resultEmoji').textContent = levelEmoji;
     document.getElementById('resultLevel').textContent = levelText;
