@@ -576,7 +576,7 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static(PUBLIC_DIR, {
-    index: 'AI-PM-Coach-在线测评.html',
+    index: 'index.html',
     setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache')
 }));
 

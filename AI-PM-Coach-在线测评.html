@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI PM Coach - 在线测评</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -521,7 +522,7 @@
                 </div>
                 <div>
                     <div class="text-xs text-gray-500 mb-1">当前分数</div>
-                    <div class="font-semibold text-indigo-600" id="scoreDisplay">50</div>
+                    <div class="font-semibold text-indigo-600" id="scoreDisplayCard">50</div>
                 </div>
             </div>
             <div class="text-xs text-blue-700 bg-white/50 rounded-lg px-3 py-2" id="selectionReason">
@@ -622,6 +623,53 @@
     </div>
 </div>
 
+<!-- 结果总结页面（初始隐藏，答完全部题目后显示） -->
+<div id="finalResult" class="hidden fixed inset-0 bg-gray-100 overflow-auto z-[200]">
+    <div class="max-w-3xl mx-auto px-4 py-8">
+        <!-- 头部：总分 + 徽章 -->
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white text-center mb-6">
+            <div class="text-5xl mb-2" id="resultEmoji">🎉</div>
+            <h1 class="text-2xl font-bold mb-2">测评完成！</h1>
+            <div class="text-5xl font-bold my-4"><span id="finalScore">0</span><span class="text-2xl opacity-70">/100</span></div>
+            <div class="text-sm opacity-80" id="resultLevel">—</div>
+        </div>
+
+        <!-- 雷达图 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">📊 各维度能力分析</h2>
+            <div style="height:320px;">
+                <canvas id="radarChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 维度得分明细 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">📈 维度得分明细</h2>
+            <div id="dimensionDetails" class="space-y-3">
+                <!-- 由 JS 填充 -->
+            </div>
+        </div>
+
+        <!-- 错题回顾 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">❌ 错题回顾</h2>
+            <div id="wrongQuestions" class="space-y-4">
+                <!-- 由 JS 填充 -->
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="flex gap-4 justify-center pb-8">
+            <button onclick="location.reload()" class="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition">
+                🔄 重新测评
+            </button>
+            <button onclick="location.href='index.html'" class="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition">
+                🏠 返回首页
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
 // ======================== 真实题库数据（从 MD 题库解析） ========================
 const QUESTIONS = [
@@ -686,6 +734,8 @@ const explanationCache = {};
 let quizState = {
     currentIdx: 0,
     answered: [],          // 已答题号
+    correctMap: {},        // 记录每道已答题的对错：{num: true/false/null(跳过)}
+    skippedNums: [],       // 跳过的题号（不计分也不计对错）
     score: 50,
     dimensionStats: {}     // 各维度统计
 };
@@ -951,7 +1001,9 @@ function renderQuestion(q) {
     difficultyBadge.className = `difficulty-badge difficulty-${q.difficulty}`;
     difficultyBadge.innerHTML = `<span>●</span><span>${q.difficulty}</span>`;
     document.getElementById('answeredCount').textContent = quizState.answered.length;
+    // 同步更新两处分数显示（header + CAT状态卡片）
     document.getElementById('scoreDisplay').textContent = quizState.score;
+    document.getElementById('scoreDisplayCard').textContent = quizState.score;
     document.getElementById('selectionReason').innerHTML =
         `<strong>选题理由：</strong>维度"${q.dimension}"已答${quizState.answered.filter(n => QUESTIONS.find(qq => qq.num === n)?.dimension === q.dimension).length}题，当前难度${q.difficulty}`;
 
@@ -1082,13 +1134,21 @@ function showToast(msg) {
 }
 
 document.getElementById('skipBtn').addEventListener('click', () => {
-    // 跳过：不记录答题，直接下一题
-    quizState.currentQuestion = null;
+    if (!currentQuestion) return;
+    // 已答题不能再跳过
+    if (isCurrentAnswered()) {
+        showToast('本题已提交，无法跳过');
+        return;
+    }
+    // 跳过：标记为已答（不计分），直接下一题
+    quizState.answered.push(currentQuestion.num);
+    quizState.skippedNums.push(currentQuestion.num);
+    quizState.correctMap[currentQuestion.num] = null;
     const next = selectNextQuestion();
     if (next) {
         renderQuestion(next);
     } else {
-        alert('所有题目已完成！');
+        showFinalResult();
     }
 });
 
@@ -1106,6 +1166,7 @@ document.getElementById('nextBtn').addEventListener('click', () => {
         const isCorrect = currentSelection === currentQuestion.answer;
         quizState.score = Math.max(0, Math.min(100, quizState.score + (isCorrect ? 5 : -3)));
         quizState.answered.push(currentQuestion.num);
+        quizState.correctMap[currentQuestion.num] = isCorrect;
         showAnswerResult(currentQuestion, currentSelection, true);
         return;
     }
@@ -1115,7 +1176,7 @@ document.getElementById('nextBtn').addEventListener('click', () => {
     if (next) {
         renderQuestion(next);
     } else {
-        alert(`🎉 所有 ${QUESTIONS.length} 道题目已完成！\n\n最终得分：${quizState.score}/100`);
+        showFinalResult();
     }
 });
 
@@ -1126,6 +1187,169 @@ if (initQuestion) {
 } else {
     document.getElementById('questionCard').innerHTML =
         '<div class="p-12 text-center text-gray-500"><div class="text-4xl mb-4">🎉</div>所有题目已完成！</div>';
+}
+
+// ======================== 结果总结页面 ========================
+let radarChartInstance = null;
+
+function showFinalResult() {
+    // 用精确数据统计各维度
+    const dimStats = {};
+    const allDims = new Set(QUESTIONS.map(q => q.dimension));
+    allDims.forEach(dim => {
+        dimStats[dim] = { total: 0, answered: 0, correct: 0, skipped: 0, wrong: 0 };
+    });
+    QUESTIONS.forEach(q => {
+        if (dimStats[q.dimension]) dimStats[q.dimension].total++;
+    });
+
+    // 遍历已答题，用 correctMap 精确统计
+    quizState.answered.forEach(num => {
+        const q = QUESTIONS.find(qq => qq.num === num);
+        if (!q || !dimStats[q.dimension]) return;
+        dimStats[q.dimension].answered++;
+        const result = quizState.correctMap[num];
+        if (result === true) dimStats[q.dimension].correct++;
+        else if (result === false) dimStats[q.dimension].wrong++;
+        else if (result === null) dimStats[q.dimension].skipped++;
+    });
+
+    // 计算各维度百分制得分（答对率映射到 50-100 区间，跳过不计入分母）
+    const dimPercentages = {};
+    const dimList = Object.keys(dimStats);
+    dimList.forEach(dim => {
+        const s = dimStats[dim];
+        const有效答 = s.correct + s.wrong; // 排除跳过
+        if (有效答 > 0) {
+            // 基础分 50 + 答对率 * 50
+            dimPercentages[dim] = Math.round(50 + 50 * (s.correct / 有效答));
+        } else if (s.skipped > 0) {
+            // 全部跳过：给 40 分警示
+            dimPercentages[dim] = 40;
+        } else {
+            // 未答：50 分
+            dimPercentages[dim] = 50;
+        }
+    });
+
+    // 更新 DOM
+    document.getElementById('finalScore').textContent = quizState.score;
+
+    // 等级徽章
+    const score = quizState.score;
+    let levelEmoji = '🎉', levelText = '';
+    if (score >= 90) { levelEmoji = '🏆'; levelText = '优秀！你是 AI PM 领域的专家'; }
+    else if (score >= 75) { levelEmoji = '🌟'; levelText = '良好！扎实的产品经理基础'; }
+    else if (score >= 60) { levelEmoji = '💪'; levelText = '及格！继续努力提升'; }
+    else { levelEmoji = '📚'; levelText = '需要加强学习，加油！'; }
+    document.getElementById('resultEmoji').textContent = levelEmoji;
+    document.getElementById('resultLevel').textContent = levelText;
+
+    // 维度得分明细
+    const dimDetailsHtml = dimList.map(dim => {
+        const pct = dimPercentages[dim];
+        const s = dimStats[dim];
+        const barColor = pct >= 80 ? 'bg-green-500' : pct >= 60 ? 'bg-yellow-500' : 'bg-red-500';
+        const subText = `正确 ${s.correct} / 错 ${s.wrong} / 跳过 ${s.skipped}（共 ${s.total} 题）`;
+        return `
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <div class="text-sm text-gray-700 font-medium">${dim}</div>
+                    <div>
+                        <span class="font-bold text-indigo-600">${pct}</span>
+                        <span class="text-gray-400 text-sm">分</span>
+                    </div>
+                </div>
+                <div class="h-2.5 bg-gray-200 rounded-full overflow-hidden mb-1">
+                    <div class="${barColor} h-full rounded-full transition-all" style="width:${pct}%"></div>
+                </div>
+                <div class="text-xs text-gray-400">${subText}</div>
+            </div>
+        `;
+    }).join('');
+    document.getElementById('dimensionDetails').innerHTML = dimDetailsHtml;
+
+    // 错题回顾（精确数据：答错的题）
+    const wrongHtml = (function() {
+        const wrongNums = Object.keys(quizState.correctMap)
+            .filter(num => quizState.correctMap[num] === false)
+            .map(num => parseInt(num));
+        if (wrongNums.length === 0) {
+            return '<div class="text-center text-gray-500 py-6">🎉 太棒了！全部答对，没有错题！</div>';
+        }
+        return wrongNums.map(num => {
+            const q = QUESTIONS.find(qq => qq.num === num);
+            if (!q) return '';
+            return `
+                <div class="border border-red-200 bg-red-50 rounded-lg p-4">
+                    <div class="flex items-start gap-2 mb-2">
+                        <span class="px-2 py-0.5 bg-indigo-100 text-indigo-600 text-xs rounded font-medium">${q.dimension}</span>
+                        <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded">难度 ${q.difficulty}</span>
+                        <span class="px-2 py-0.5 bg-red-100 text-red-600 text-xs rounded">答错</span>
+                    </div>
+                    <div class="font-medium text-gray-900 mb-2">${q.question}</div>
+                    <div class="text-sm text-gray-600">
+                        <div class="mb-1"><strong class="text-green-600">正确答案：${q.answer}</strong></div>
+                        <div class="text-gray-700 leading-relaxed">${q.explanation}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    })();
+    document.getElementById('wrongQuestions').innerHTML = wrongHtml;
+
+    // 绘制雷达图
+    const radarLabels = dimList;
+    const radarData = radarLabels.map(d => dimPercentages[d]);
+    if (radarChartInstance) { radarChartInstance.destroy(); radarChartInstance = null; }
+    const ctx = document.getElementById('radarChart');
+    if (ctx && typeof Chart !== 'undefined') {
+        radarChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: radarLabels,
+                datasets: [{
+                    label: '能力得分',
+                    data: radarData,
+                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    borderColor: 'rgba(99, 102, 241, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(99, 102, 241, 1)',
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { stepSize: 20, color: '#9ca3af', backdropColor: 'transparent' },
+                        grid: { color: '#e5e7eb' },
+                        angleLines: { color: '#e5e7eb' },
+                        pointLabels: { font: { size: 12 }, color: '#374151' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.raw} 分`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 隐藏答题界面，显示结果页
+    document.querySelector('.min-h-screen.flex.flex-col').style.display = 'none';
+    document.getElementById('finalResult').classList.remove('hidden');
+    // 滚动到顶部
+    window.scrollTo(0, 0);
 }
 
 // ======================== 收藏词库（localStorage 持久化）========================
