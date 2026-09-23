@@ -1329,10 +1329,10 @@ function showFinalResult() {
     const dimList = Object.keys(dimStats);
     dimList.forEach(dim => {
         const s = dimStats[dim];
-        const有效答 = s.correct + s.wrong; // 排除跳过
-        if (有效答 > 0) {
+        const validCount = s.correct + s.wrong; // 排除跳过
+        if (validCount > 0) {
             // 基础分 50 + 答对率 * 50
-            dimPercentages[dim] = Math.round(50 + 50 * (s.correct / 有效答));
+            dimPercentages[dim] = Math.round(50 + 50 * (s.correct / validCount));
         } else if (s.skipped > 0) {
             // 全部跳过：给 40 分警示
             dimPercentages[dim] = 40;
